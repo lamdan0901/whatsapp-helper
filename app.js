@@ -1,0 +1,37 @@
+// WhatsApp Helper. Classic script (ES modules are blocked on file:// in Chrome).
+// Pure logic first; Node loads this file for tests (test.js). UI starts only in a browser.
+
+const PLACEHOLDER = /\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g;
+
+// Own-property lookup so names like {{constructor}} don't hit Object.prototype.
+function own(obj, key) {
+  return obj != null && Object.hasOwn(obj, key) ? String(obj[key] ?? '') : '';
+}
+
+function parseFields(body) {
+  const names = [];
+  for (const [, name] of body.matchAll(PLACEHOLDER)) {
+    if (name !== 'phone' && !names.includes(name)) names.push(name);
+  }
+  return names;
+}
+
+function render(body, values) {
+  return body.replace(PLACEHOLDER, (_, name) => own(values, name).trim());
+}
+
+function normalizePhone(s) {
+  const digits = String(s ?? '')
+    .replace(/[\s\-().]/g, '')
+    .replace(/^\+/, '')
+    .replace(/^00/, '');
+  return /^\d{8,15}$/.test(digits) ? digits : null;
+}
+
+function waLink(phone, msg) {
+  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+}
+
+if (typeof module !== 'undefined') {
+  module.exports = { own, parseFields, render, normalizePhone, waLink };
+}
