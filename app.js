@@ -169,11 +169,12 @@ if (typeof module !== 'undefined') {
 
 function initUI() {
   const $ = (id) => document.getElementById(id);
-  const button = (text, onclick) => {
+  const button = (text, onclick, className = '') => {
     const b = document.createElement('button');
     b.type = 'button';
     b.textContent = text;
     b.onclick = onclick;
+    b.className = className;
     return b;
   };
   const showBanner = (msg) => {
@@ -213,25 +214,32 @@ function initUI() {
     const items = templates.map((t) => {
       const li = document.createElement('li');
       const name = document.createElement('span');
+      name.className = 'tpl-name';
       name.textContent = t.name;
-      li.append(
-        name,
-        button('Edit', () => openEditor(t)),
+      const snippet = document.createElement('span');
+      snippet.className = 'tpl-snippet';
+      snippet.textContent = t.body.split('\n')[0];
+      const actions = document.createElement('div');
+      actions.className = 'tpl-actions';
+      actions.append(
+        button('Edit', () => openEditor(t), 'ghost'),
         // Unsaved until Save: new id makes the submit handler append it.
-        button('Duplicate', () => openEditor({ ...t, id: crypto.randomUUID(), name: `${t.name} (copy)` })),
+        button('Duplicate', () => openEditor({ ...t, id: crypto.randomUUID(), name: `${t.name} (copy)` }), 'ghost'),
         button('Delete', () => {
           if (!confirm(`Delete template "${t.name}"?`)) return;
           templates = templates.filter((x) => x.id !== t.id);
           persist();
           renderList();
           if (editing?.id === t.id) closeEditor();
-        }),
+        }, 'ghost danger'),
       );
+      li.append(name, snippet, actions);
       return li;
     });
     if (!items.length) {
       const li = document.createElement('li');
-      li.textContent = 'No templates yet.';
+      li.className = 'empty';
+      li.textContent = 'No templates yet. Click "New template" to create your first one.';
       items.push(li);
     }
     $('tpl-list').replaceChildren(...items);
@@ -258,6 +266,9 @@ function initUI() {
     const names = parseFields(editing.body);
     const items = names.map((n) => {
       const li = document.createElement('li');
+      li.className = 'chip';
+      const code = document.createElement('code');
+      code.textContent = n;
       const label = document.createElement('label');
       const cb = document.createElement('input');
       cb.type = 'checkbox';
@@ -265,13 +276,14 @@ function initUI() {
       cb.onchange = () => {
         editing.fields[n].required = cb.checked;
       };
-      label.append(cb, ` ${n} required`);
-      li.append(label);
+      label.append(cb, 'required');
+      li.append(code, label);
       return li;
     });
     if (!items.length) {
       const li = document.createElement('li');
-      li.textContent = 'Add {{field}} placeholders to the body. {{phone}} is always available.';
+      li.className = 'empty';
+      li.textContent = 'Add {{field}} placeholders to the message. {{phone}} is always available.';
       items.push(li);
     }
     $('tpl-fields').replaceChildren(...items);
@@ -379,6 +391,7 @@ function initUI() {
   function renderTable() {
     const table = $('send-table');
     $('row-add').disabled = $('row-clear').disabled = !sendTpl;
+    updateCount();
     if (!sendTpl) {
       table.tHead.replaceChildren();
       table.tBodies[0].replaceChildren();
@@ -416,17 +429,21 @@ function initUI() {
         });
         tr.insertCell().className = 'preview';
         tr.insertCell().className = 'send';
-        tr.insertCell().append(
-          button('✕', () => {
-            rows.splice(r, 1);
-            if (!rows.length) rows.push(newRow());
-            renderTable();
-          }),
-        );
+        const remove = button('✕', () => {
+          rows.splice(r, 1);
+          if (!rows.length) rows.push(newRow());
+          renderTable();
+        }, 'ghost danger icon');
+        remove.title = 'Remove row';
+        tr.insertCell().append(remove);
         updateRow(tr, row);
         return tr;
       }),
     );
+  }
+
+  function updateCount() {
+    $('sent-count').textContent = sendTpl ? `${rows.filter((r) => r.sent).length} / ${rows.length} sent` : '';
   }
 
   function updateRow(tr, row) {
@@ -439,15 +456,16 @@ function initUI() {
     const msg = render(sendTpl.body, row.values);
     tr.querySelector('.preview').textContent = msg;
     tr.classList.toggle('sent', row.sent);
+    updateCount();
     const cell = tr.querySelector('.send');
     if (Object.keys(errors).length) {
-      const b = button('Send', null);
+      const b = button('Send', null, 'primary');
       b.disabled = true;
       cell.replaceChildren(b);
       return;
     }
     const a = document.createElement('a');
-    a.className = 'button send-link';
+    a.className = row.sent ? 'button send-link is-sent' : 'button send-link';
     a.href = waLink(normalizePhone(own(row.values, 'phone')), msg);
     a.target = '_blank';
     a.rel = 'noopener';

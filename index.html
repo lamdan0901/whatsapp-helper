@@ -8,51 +8,88 @@
   <script src="app.js" defer></script>
 </head>
 <body>
-  <header>
-    <h1>WhatsApp Helper</h1>
-    <nav>
-      <button type="button" class="tab" data-tab="send">Send</button>
-      <button type="button" class="tab" data-tab="templates">Templates</button>
-    </nav>
+  <header class="appbar">
+    <div class="container appbar-inner">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 3C7 3 3 6.6 3 11c0 2.2 1 4.2 2.7 5.6L5 21l4.3-2.2c.9.2 1.8.3 2.7.3 5 0 9-3.6 9-8s-4-8-9-8z"/></svg>
+        </span>
+        <h1>WhatsApp Helper</h1>
+      </div>
+      <nav class="tabs">
+        <button type="button" class="tab" data-tab="send">Send</button>
+        <button type="button" class="tab" data-tab="templates">Templates</button>
+      </nav>
+    </div>
   </header>
-  <p id="banner" hidden></p>
 
-  <section id="tab-templates" hidden>
-    <div class="toolbar">
-      <button type="button" id="tpl-new">New template</button>
-      <button type="button" id="tpl-export">Export JSON</button>
-      <label class="button">Import JSON <input id="tpl-import" type="file" accept=".json,application/json" hidden></label>
-    </div>
-    <ul id="tpl-list"></ul>
-    <form id="tpl-editor" hidden>
-      <label>Name <input id="tpl-name"></label>
-      <label>Body <textarea id="tpl-body" rows="6" placeholder="Hi {{name}}, your order {{order_id}} is ready."></textarea></label>
-      <p>
-        <button type="button" id="tpl-insert">Insert field</button>
-        <span class="hint">Tip: write the real message, select a word like "John", click Insert field to turn it into {{name}}.</span>
-      </p>
-      <p id="tpl-warn" class="warn" hidden><span></span> <button type="button" id="tpl-fix">Fix</button></p>
-      <fieldset>
-        <legend>Fields</legend>
-        <ul id="tpl-fields"></ul>
-      </fieldset>
-      <p>Preview</p>
-      <pre id="tpl-preview"></pre>
-      <button id="tpl-save" type="submit">Save</button>
-      <button id="tpl-cancel" type="button">Cancel</button>
-    </form>
-  </section>
+  <main class="container">
+    <p id="banner" class="alert" hidden></p>
 
-  <section id="tab-send" hidden>
-    <div class="toolbar">
-      <label>Template <select id="send-template"></select></label>
-      <button type="button" id="row-add">Add row</button>
-      <button type="button" id="row-clear">Clear all</button>
-    </div>
-    <p class="hint">Phone must be full international number. Tip: copy cells from Excel/Sheets and paste into any cell.</p>
-    <div class="table-wrap">
-      <table id="send-table"><thead></thead><tbody></tbody></table>
-    </div>
-  </section>
+    <section id="tab-templates" hidden>
+      <div class="page-head">
+        <div>
+          <h2>Templates</h2>
+          <p class="hint">Reusable messages with {{fields}} you fill in per contact.</p>
+        </div>
+        <div class="toolbar">
+          <label class="button">Import JSON <input id="tpl-import" type="file" accept=".json,application/json" hidden></label>
+          <button type="button" id="tpl-export">Export JSON</button>
+          <button type="button" id="tpl-new" class="primary">+ New template</button>
+        </div>
+      </div>
+
+      <div class="tpl-layout">
+        <ul id="tpl-list"></ul>
+
+        <form id="tpl-editor" class="card" hidden>
+          <label class="field">Name <input id="tpl-name" placeholder="e.g. Order ready"></label>
+          <label class="field">Message <textarea id="tpl-body" rows="6" placeholder="Hi {{name}}, your order {{order_id}} is ready."></textarea></label>
+          <div class="insert-row">
+            <button type="button" id="tpl-insert">{ } Insert field</button>
+            <span class="hint">Tip: write the real message, select a word like "John", click Insert field to turn it into {{name}}.</span>
+          </div>
+          <p id="tpl-warn" class="alert danger" hidden><span></span> <button type="button" id="tpl-fix">Fix</button></p>
+          <fieldset>
+            <legend>Fields</legend>
+            <ul id="tpl-fields"></ul>
+          </fieldset>
+          <div class="field">
+            <span>Preview</span>
+            <div class="chat"><pre id="tpl-preview" class="bubble"></pre></div>
+          </div>
+          <div class="form-actions">
+            <button id="tpl-cancel" type="button">Cancel</button>
+            <button id="tpl-save" type="submit" class="primary">Save template</button>
+          </div>
+        </form>
+        <div class="card empty-state tpl-placeholder">
+          <p><strong>No template open</strong></p>
+          <p class="hint">Pick one on the left to edit, or create a new one.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-send" hidden>
+      <div class="page-head">
+        <div>
+          <h2>Send messages</h2>
+          <p class="hint">Phone must be full international number. Tip: copy cells from Excel/Sheets and paste into any cell.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="toolbar">
+          <label class="inline-field">Template <select id="send-template"></select></label>
+          <span class="spacer"></span>
+          <span id="sent-count" class="badge"></span>
+          <button type="button" id="row-clear">Clear all</button>
+          <button type="button" id="row-add" class="primary">+ Add row</button>
+        </div>
+        <div class="table-wrap">
+          <table id="send-table"><thead></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </section>
+  </main>
 </body>
 </html>
