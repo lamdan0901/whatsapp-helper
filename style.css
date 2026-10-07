@@ -12,6 +12,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 #banner { background: #fff3cd; color: #664d03; padding: 8px 12px; border-radius: 6px; }
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 16px 0; }
 .hint { opacity: 0.7; font-size: 0.9rem; }
+.warn { color: #d33; }
 #tpl-list { padding: 0; list-style: none; }
 #tpl-list li { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
 #tpl-list span { flex: 1; }

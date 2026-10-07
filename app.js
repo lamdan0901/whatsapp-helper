@@ -16,6 +16,32 @@ function parseFields(body) {
   return names;
 }
 
+// Placeholder-looking text PLACEHOLDER won't treat as a field: {{first name}}, {name}.
+const LOOSE = /\{\{([^{}]*)\}\}|(?<!\{)\{([^{}\n]+)\}(?!\})/g;
+const VALID_NAME = /^\s*[A-Za-z0-9_]+\s*$/;
+
+function slug(s) {
+  return String(s).trim().replace(/[\s-]+/g, '_').replace(/[^A-Za-z0-9_]/g, '');
+}
+
+function badPlaceholders(body) {
+  const bad = [];
+  for (const [m, double] of body.matchAll(LOOSE)) {
+    if (double !== undefined && VALID_NAME.test(double)) continue;
+    if (!bad.includes(m)) bad.push(m);
+  }
+  return bad;
+}
+
+// Unfixable ones (nothing left after slug, e.g. non-Latin names) stay as they are.
+function fixPlaceholders(body) {
+  return body.replace(LOOSE, (m, double, single) => {
+    if (double !== undefined && VALID_NAME.test(double)) return m;
+    const name = slug(double ?? single);
+    return name ? `{{${name}}}` : m;
+  });
+}
+
 function render(body, values) {
   return body.replace(PLACEHOLDER, (_, name) => own(values, name).trim());
 }
@@ -133,7 +159,7 @@ function applyPaste(rows, rowIdx, colIdx, grid, columns) {
 
 if (typeof module !== 'undefined') {
   module.exports = {
-    own, parseFields, render, normalizePhone, waLink, parseTSV,
+    own, parseFields, slug, badPlaceholders, fixPlaceholders, render, normalizePhone, waLink, parseTSV,
     STORAGE_KEY, syncFields, parseImport, mergeTemplates, loadTemplates, saveTemplates,
     columnsFor, rowErrors, applyPaste,
   };
@@ -191,6 +217,8 @@ function initUI() {
       li.append(
         name,
         button('Edit', () => openEditor(t)),
+        // Unsaved until Save: new id makes the submit handler append it.
+        button('Duplicate', () => openEditor({ ...t, id: crypto.randomUUID(), name: `${t.name} (copy)` })),
         button('Delete', () => {
           if (!confirm(`Delete template "${t.name}"?`)) return;
           templates = templates.filter((x) => x.id !== t.id);
@@ -247,6 +275,10 @@ function initUI() {
       items.push(li);
     }
     $('tpl-fields').replaceChildren(...items);
+    const bad = badPlaceholders(editing.body);
+    $('tpl-warn').hidden = !bad.length;
+    $('tpl-warn').firstChild.textContent = `Not fields: ${bad.join(', ')}. Use {{name}} with letters, digits or _ only.`;
+    $('tpl-fix').hidden = badPlaceholders(fixPlaceholders(editing.body)).length === bad.length;
     const samples = Object.fromEntries([...names, 'phone'].map((n) => [n, `[${n}]`]));
     $('tpl-preview').textContent = render(editing.body, samples);
     $('tpl-save').disabled = !editing.name.trim() || !editing.body.trim();
@@ -254,6 +286,22 @@ function initUI() {
 
   $('tpl-name').oninput = updateEditor;
   $('tpl-body').oninput = updateEditor;
+  // Selected text becomes {{field}}; with no selection, inserts at the cursor.
+  $('tpl-insert').onclick = () => {
+    const ta = $('tpl-body');
+    const { selectionStart: start, selectionEnd: end } = ta;
+    const input = prompt('Field name (letters, digits, _):', slug(ta.value.slice(start, end)).toLowerCase());
+    if (input == null) return;
+    const name = slug(input);
+    if (!name) return alert('Field name needs letters, digits or _.');
+    ta.focus();
+    ta.setRangeText(`{{${name}}}`, start, end, 'end');
+    updateEditor();
+  };
+  $('tpl-fix').onclick = () => {
+    $('tpl-body').value = fixPlaceholders($('tpl-body').value);
+    updateEditor();
+  };
   $('tpl-new').onclick = () => openEditor();
   $('tpl-cancel').onclick = closeEditor;
   $('tpl-editor').onsubmit = (e) => {

@@ -27,6 +27,11 @@
     <form id="tpl-editor" hidden>
       <label>Name <input id="tpl-name"></label>
       <label>Body <textarea id="tpl-body" rows="6" placeholder="Hi {{name}}, your order {{order_id}} is ready."></textarea></label>
+      <p>
+        <button type="button" id="tpl-insert">Insert field</button>
+        <span class="hint">Tip: write the real message, select a word like "John", click Insert field to turn it into {{name}}.</span>
+      </p>
+      <p id="tpl-warn" class="warn" hidden><span></span> <button type="button" id="tpl-fix">Fix</button></p>
       <fieldset>
         <legend>Fields</legend>
         <ul id="tpl-fields"></ul>

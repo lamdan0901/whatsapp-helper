@@ -65,6 +65,23 @@ eq('parseTSV single cell from Excel', parseTSV('85291234567\r\n'), [['8529123456
 eq('parseTSV empty cells kept', parseTSV('a\t\tc'), [['a', '', 'c']]);
 eq('parseTSV quote mid-cell is literal', parseTSV('5" screen\tx'), [['5" screen', 'x']]);
 
+// --- placeholder helpers ---
+const { slug, badPlaceholders, fixPlaceholders } = lib;
+eq('slug spaces/hyphens -> _, drops others', slug(' order no-2! '), 'order_no_2');
+eq('slug non-Latin -> empty', slug('名字'), '');
+eq('badPlaceholders valid ones ignored', badPlaceholders('{{a}} {{ b_1 }}'), []);
+eq(
+  'badPlaceholders spaces, single braces, empty, dedup',
+  badPlaceholders('{{first name}} {name} {{}} {{first name}}'),
+  ['{{first name}}', '{name}', '{{}}'],
+);
+eq(
+  'fixPlaceholders fixes fixable, keeps valid + unfixable',
+  fixPlaceholders('Hi {{first name}} {last-name} {{ ok }} {{名字}}'),
+  'Hi {{first_name}} {{last_name}} {{ ok }} {{名字}}',
+);
+eq('fixPlaceholders result parses as fields', parseFields(fixPlaceholders('{{first name}} {x}')), ['first_name', 'x']);
+
 // --- template store ---
 const { syncFields, parseImport, mergeTemplates, loadTemplates, saveTemplates, STORAGE_KEY } = lib;
 eq(
