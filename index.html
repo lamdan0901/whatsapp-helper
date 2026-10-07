@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WhatsApp Helper</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>WhatsApp Helper</h1>
+    <nav>
+      <button type="button" class="tab" data-tab="send">Send</button>
+      <button type="button" class="tab" data-tab="templates">Templates</button>
+    </nav>
+  </header>
+  <p id="banner" hidden></p>
+
+  <section id="tab-templates" hidden>
+    <div class="toolbar">
+      <button type="button" id="tpl-new">New template</button>
+      <button type="button" id="tpl-export">Export JSON</button>
+      <label class="button">Import JSON <input id="tpl-import" type="file" accept=".json,application/json" hidden></label>
+    </div>
+    <ul id="tpl-list"></ul>
+    <form id="tpl-editor" hidden>
+      <label>Name <input id="tpl-name"></label>
+      <label>Body <textarea id="tpl-body" rows="6" placeholder="Hi {{name}}, your order {{order_id}} is ready."></textarea></label>
+      <fieldset>
+        <legend>Fields</legend>
+        <ul id="tpl-fields"></ul>
+      </fieldset>
+      <p>Preview</p>
+      <pre id="tpl-preview"></pre>
+      <button id="tpl-save" type="submit">Save</button>
+      <button id="tpl-cancel" type="button">Cancel</button>
+    </form>
+  </section>
+
+  <section id="tab-send" hidden>
+    <div class="toolbar">
+      <label>Template <select id="send-template"></select></label>
+      <button type="button" id="row-add">Add row</button>
+      <button type="button" id="row-clear">Clear all</button>
+    </div>
+    <p class="hint">Phone must be full international number. Tip: copy cells from Excel/Sheets and paste into any cell.</p>
+    <div class="table-wrap">
+      <table id="send-table"><thead></thead><tbody></tbody></table>
+    </div>
+  </section>
+</body>
+</html>

@@ -137,3 +137,159 @@ if (typeof module !== 'undefined') {
     columnsFor, rowErrors, applyPaste,
   };
 }
+
+// ---------------- UI (browser only) ----------------
+
+function initUI() {
+  const $ = (id) => document.getElementById(id);
+  const button = (text, onclick) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = text;
+    b.onclick = onclick;
+    return b;
+  };
+  const showBanner = (msg) => {
+    $('banner').textContent = msg;
+    $('banner').hidden = false;
+  };
+  const CANT_SAVE = "Templates can't be saved in this browser. Use Export JSON to keep them.";
+
+  let storage = null;
+  try {
+    storage = window.localStorage;
+  } catch {
+    // blocked by browser privacy settings; handled below
+  }
+  const loaded = loadTemplates(storage);
+  let templates = loaded.templates;
+  if (!storage) showBanner(CANT_SAVE);
+  else if (loaded.error) showBanner('Saved templates could not be read. They stay untouched until you save a template.');
+
+  function persist() {
+    if (!saveTemplates(storage, templates)) showBanner(CANT_SAVE);
+  }
+
+  // --- tabs ---
+  function showTab(name) {
+    for (const b of document.querySelectorAll('.tab')) b.classList.toggle('active', b.dataset.tab === name);
+    $('tab-templates').hidden = name !== 'templates';
+    $('tab-send').hidden = name !== 'send';
+  }
+  for (const b of document.querySelectorAll('.tab')) b.onclick = () => showTab(b.dataset.tab);
+
+  // --- templates tab ---
+  let editing = null; // draft copy of the template being edited
+
+  function renderList() {
+    const items = templates.map((t) => {
+      const li = document.createElement('li');
+      const name = document.createElement('span');
+      name.textContent = t.name;
+      li.append(
+        name,
+        button('Edit', () => openEditor(t)),
+        button('Delete', () => {
+          if (!confirm(`Delete template "${t.name}"?`)) return;
+          templates = templates.filter((x) => x.id !== t.id);
+          persist();
+          renderList();
+          if (editing?.id === t.id) closeEditor();
+        }),
+      );
+      return li;
+    });
+    if (!items.length) {
+      const li = document.createElement('li');
+      li.textContent = 'No templates yet.';
+      items.push(li);
+    }
+    $('tpl-list').replaceChildren(...items);
+  }
+
+  function openEditor(t) {
+    editing = structuredClone(t ?? { id: crypto.randomUUID(), name: '', body: '', fields: {} });
+    $('tpl-name').value = editing.name;
+    $('tpl-body').value = editing.body;
+    $('tpl-editor').hidden = false;
+    updateEditor();
+    $('tpl-name').focus();
+  }
+
+  function closeEditor() {
+    editing = null;
+    $('tpl-editor').hidden = true;
+  }
+
+  function updateEditor() {
+    editing.name = $('tpl-name').value;
+    editing.body = $('tpl-body').value;
+    editing.fields = syncFields(editing.body, editing.fields);
+    const names = parseFields(editing.body);
+    const items = names.map((n) => {
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = editing.fields[n].required;
+      cb.onchange = () => {
+        editing.fields[n].required = cb.checked;
+      };
+      label.append(cb, ` ${n} required`);
+      li.append(label);
+      return li;
+    });
+    if (!items.length) {
+      const li = document.createElement('li');
+      li.textContent = 'Add {{field}} placeholders to the body. {{phone}} is always available.';
+      items.push(li);
+    }
+    $('tpl-fields').replaceChildren(...items);
+    const samples = Object.fromEntries([...names, 'phone'].map((n) => [n, `[${n}]`]));
+    $('tpl-preview').textContent = render(editing.body, samples);
+    $('tpl-save').disabled = !editing.name.trim() || !editing.body.trim();
+  }
+
+  $('tpl-name').oninput = updateEditor;
+  $('tpl-body').oninput = updateEditor;
+  $('tpl-new').onclick = () => openEditor();
+  $('tpl-cancel').onclick = closeEditor;
+  $('tpl-editor').onsubmit = (e) => {
+    e.preventDefault();
+    if ($('tpl-save').disabled) return;
+    const t = { ...editing, name: editing.name.trim() };
+    const i = templates.findIndex((x) => x.id === t.id);
+    if (i >= 0) templates[i] = t;
+    else templates.push(t);
+    persist();
+    renderList();
+    closeEditor();
+  };
+
+  $('tpl-export').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(templates, null, 2)], { type: 'application/json' }));
+    a.download = 'wa-templates.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href));
+  };
+
+  $('tpl-import').onchange = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = ''; // allow re-importing the same file
+    if (!file) return;
+    try {
+      templates = mergeTemplates(templates, parseImport(await file.text()));
+    } catch (err) {
+      alert(`Import failed: ${err.message}`);
+      return;
+    }
+    persist();
+    renderList();
+  };
+
+  renderList();
+  showTab(templates.length ? 'send' : 'templates');
+}
+
+if (typeof document !== 'undefined') initUI();

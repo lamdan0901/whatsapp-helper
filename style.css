@@ -1,0 +1,28 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+[hidden] { display: none !important; }
+body { max-width: 1100px; margin: 0 auto; padding: 16px; }
+header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+h1 { font-size: 1.4rem; margin: 0; }
+button, .button {
+  font: inherit; padding: 6px 12px; cursor: pointer; display: inline-block;
+  border: 1px solid #888; border-radius: 6px; background: ButtonFace; color: ButtonText; text-decoration: none;
+}
+button:disabled { opacity: 0.5; cursor: default; }
+.tab.active { font-weight: bold; border-color: #25d366; box-shadow: inset 0 -3px 0 #25d366; }
+#banner { background: #fff3cd; color: #664d03; padding: 8px 12px; border-radius: 6px; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 16px 0; }
+.hint { opacity: 0.7; font-size: 0.9rem; }
+#tpl-list { padding: 0; list-style: none; }
+#tpl-list li { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
+#tpl-list span { flex: 1; }
+#tpl-editor > label { display: block; margin: 8px 0; }
+#tpl-name, #tpl-body { display: block; width: 100%; box-sizing: border-box; font: inherit; }
+#tpl-fields { padding: 0; list-style: none; }
+pre, .preview { white-space: pre-wrap; margin: 0; font-family: inherit; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #8884; padding: 4px; text-align: left; vertical-align: top; }
+td input { width: 100%; min-width: 8em; box-sizing: border-box; font: inherit; }
+input.invalid { outline: 2px solid #d33; }
+tr.sent { opacity: 0.6; }
+a.send-link { background: #25d366; color: #fff; border-color: #1da851; white-space: nowrap; }
