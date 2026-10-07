@@ -111,3 +111,36 @@ eq('loadTemplates corrupt leaves data untouched', corrupt.data[STORAGE_KEY], '{b
 eq('loadTemplates no storage -> error', loadTemplates(undefined).error instanceof Error, true);
 eq('saveTemplates throwing storage -> false', saveTemplates({ setItem() { throw new Error('quota'); } }, []), false);
 eq('saveTemplates no storage -> false', saveTemplates(undefined, []), false);
+
+// --- rows ---
+const { columnsFor, rowErrors, applyPaste } = lib;
+const tpl = {
+  body: 'Hi {{name}}{{note}} {{phone}}',
+  fields: { name: { required: true }, note: { required: false } },
+};
+eq('columnsFor', columnsFor(tpl), ['phone', 'name', 'note']);
+eq('columnsFor phone-only template', columnsFor({ body: 'call {{phone}}', fields: {} }), ['phone']);
+eq('columnsFor digit names keep body order', columnsFor({ body: '{{b}}{{1}}', fields: {} }), ['phone', 'b', '1']);
+eq('rowErrors valid', rowErrors(tpl, { phone: '+852 9123 4567', name: 'Ann' }), {});
+eq('rowErrors bad phone + blank required', rowErrors(tpl, { phone: '123', name: '  ' }), {
+  phone: 'Use full international number, e.g. 85291234567',
+  name: 'Required',
+});
+eq('rowErrors field absent from fields map is required', Object.keys(rowErrors({ body: '{{x}}', fields: {} }, { phone: '85291234567' })), ['x']);
+eq(
+  'rowErrors prototype-named field',
+  Object.keys(rowErrors({ body: '{{constructor}}', fields: { constructor: { required: true } } }, { phone: '85291234567' })),
+  ['constructor'],
+);
+const pasted = applyPaste(
+  [{ values: { phone: 'keep' }, sent: true }],
+  0,
+  1,
+  [['A', 'B', 'EXTRA'], ['C']],
+  ['phone', 'name', 'note'],
+);
+eq('applyPaste fills right/down, adds rows, ignores extra cols', pasted.map((r) => r.values), [
+  { phone: 'keep', name: 'A', note: 'B' },
+  { name: 'C' },
+]);
+eq('applyPaste new rows unsent', pasted[1].sent, false);

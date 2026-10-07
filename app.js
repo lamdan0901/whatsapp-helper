@@ -104,9 +104,36 @@ function saveTemplates(storage, templates) {
   }
 }
 
+// Columns come from the body, not Object.keys(fields): Object.keys puts integer-like names first.
+function columnsFor(template) {
+  return ['phone', ...parseFields(template.body)];
+}
+
+function rowErrors(template, values) {
+  const errors = {};
+  if (!normalizePhone(own(values, 'phone'))) errors.phone = 'Use full international number, e.g. 85291234567';
+  for (const name of parseFields(template.body)) {
+    const required = !Object.hasOwn(template.fields, name) || template.fields[name].required !== false;
+    if (required && !own(values, name).trim()) errors[name] = 'Required';
+  }
+  return errors;
+}
+
+function applyPaste(rows, rowIdx, colIdx, grid, columns) {
+  grid.forEach((cells, i) => {
+    const row = (rows[rowIdx + i] ??= { values: {}, sent: false });
+    cells.forEach((value, j) => {
+      const col = columns[colIdx + j];
+      if (col) row.values[col] = value;
+    });
+  });
+  return rows;
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     own, parseFields, render, normalizePhone, waLink, parseTSV,
     STORAGE_KEY, syncFields, parseImport, mergeTemplates, loadTemplates, saveTemplates,
+    columnsFor, rowErrors, applyPaste,
   };
 }
