@@ -63,6 +63,50 @@ function parseTSV(text) {
   return rows;
 }
 
+const STORAGE_KEY = 'wa-helper:templates';
+
+function syncFields(body, oldFields) {
+  return Object.fromEntries(
+    parseFields(body).map((n) => [n, { required: oldFields?.[n]?.required !== false }]),
+  );
+}
+
+function parseImport(text) {
+  const data = JSON.parse(text);
+  const ok =
+    Array.isArray(data) &&
+    data.every((t) => t && typeof t.id === 'string' && typeof t.name === 'string' && typeof t.body === 'string');
+  if (!ok) throw new Error('Expected a JSON array of {id, name, body} templates');
+  return data.map((t) => ({ id: t.id, name: t.name, body: t.body, fields: syncFields(t.body, t.fields) }));
+}
+
+function mergeTemplates(existing, imported) {
+  const byId = new Map(existing.map((t) => [t.id, t]));
+  for (const t of imported) byId.set(t.id, t);
+  return [...byId.values()];
+}
+
+function loadTemplates(storage) {
+  try {
+    const raw = storage.getItem(STORAGE_KEY);
+    return { templates: raw == null ? [] : parseImport(raw), error: null };
+  } catch (error) {
+    return { templates: [], error };
+  }
+}
+
+function saveTemplates(storage, templates) {
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify(templates));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { own, parseFields, render, normalizePhone, waLink, parseTSV };
+  module.exports = {
+    own, parseFields, render, normalizePhone, waLink, parseTSV,
+    STORAGE_KEY, syncFields, parseImport, mergeTemplates, loadTemplates, saveTemplates,
+  };
 }

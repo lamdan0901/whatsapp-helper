@@ -64,3 +64,50 @@ eq(
 eq('parseTSV single cell from Excel', parseTSV('85291234567\r\n'), [['85291234567']]);
 eq('parseTSV empty cells kept', parseTSV('a\t\tc'), [['a', '', 'c']]);
 eq('parseTSV quote mid-cell is literal', parseTSV('5" screen\tx'), [['5" screen', 'x']]);
+
+// --- template store ---
+const { syncFields, parseImport, mergeTemplates, loadTemplates, saveTemplates, STORAGE_KEY } = lib;
+eq(
+  'syncFields keeps flags, new default required',
+  syncFields('{{a}}{{b}}', { a: { required: false } }),
+  { a: { required: false }, b: { required: true } },
+);
+eq('syncFields drops removed', syncFields('{{b}}', { a: { required: false }, b: { required: false } }), {
+  b: { required: false },
+});
+eq('syncFields null old', syncFields('{{a}}', null), { a: { required: true } });
+eq('parseImport ok + rebuilds fields', parseImport('[{"id":"1","name":"N","body":"{{x}}"}]'), [
+  { id: '1', name: 'N', body: '{{x}}', fields: { x: { required: true } } },
+]);
+throws('parseImport bad json', () => parseImport('{nope'));
+throws('parseImport not array', () => parseImport('{"id":"1"}'));
+throws('parseImport missing body', () => parseImport('[{"id":"1","name":"N"}]'));
+throws('parseImport null item', () => parseImport('[null]'));
+eq(
+  'mergeTemplates imported wins, order kept',
+  mergeTemplates(
+    [{ id: '1', name: 'old' }, { id: '2', name: 'b' }],
+    [{ id: '1', name: 'new' }, { id: '3', name: 'c' }],
+  ).map((t) => t.name),
+  ['new', 'b', 'c'],
+);
+const fakeStorage = (data = {}) => ({
+  data,
+  getItem(k) {
+    return k in this.data ? this.data[k] : null;
+  },
+  setItem(k, v) {
+    this.data[k] = v;
+  },
+});
+eq('loadTemplates empty', loadTemplates(fakeStorage()), { templates: [], error: null });
+const roundTrip = fakeStorage();
+const sample = [{ id: '1', name: 'N', body: 'hi', fields: {} }];
+eq('saveTemplates ok', saveTemplates(roundTrip, sample), true);
+eq('loadTemplates round trip', loadTemplates(roundTrip).templates, sample);
+const corrupt = fakeStorage({ [STORAGE_KEY]: '{bad' });
+eq('loadTemplates corrupt -> error, no throw', loadTemplates(corrupt).error instanceof Error, true);
+eq('loadTemplates corrupt leaves data untouched', corrupt.data[STORAGE_KEY], '{bad');
+eq('loadTemplates no storage -> error', loadTemplates(undefined).error instanceof Error, true);
+eq('saveTemplates throwing storage -> false', saveTemplates({ setItem() { throw new Error('quota'); } }, []), false);
+eq('saveTemplates no storage -> false', saveTemplates(undefined, []), false);
