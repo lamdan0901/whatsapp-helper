@@ -28,9 +28,12 @@ Static files, no build step, no dependencies. Works opened from disk or hosted o
 ```
 index.html   markup: two tabs (Templates, Send)
 style.css    styles
-app.js       all logic, ES module; exports pure functions for tests
-test.html    loads app.js pure functions, runs asserts, prints pass/fail
+app.js       all logic, classic script (ES modules are blocked on file:// in Chrome);
+             exports pure functions via `module.exports` when run under Node
+test.js      Node script: requires app.js, runs asserts, prints pass/fail, exit code 1 on failure
 ```
+
+`app.js` only starts the UI when `document` exists, so Node can load it for tests.
 
 ### Transport
 
@@ -88,7 +91,7 @@ Single page, two tabs.
 - Preview column shows the rendered message for the row.
 - Send: link button per row. Disabled (not a link) while the row is invalid. After click, the row is marked "sent" (visual only); the button stays usable for resending.
 
-## Pure functions (exported from app.js)
+## Pure functions (exported from app.js under Node)
 
 | Function | Behavior |
 |---|---|
@@ -115,7 +118,7 @@ Live, per row:
 
 ## Testing
 
-`test.html` imports the pure functions from `app.js` and runs plain asserts, printing pass/fail per case to the page:
+`node test.js` requires the pure functions from `app.js` and runs plain asserts, printing pass/fail per case:
 
 - `parseFields`: order, duplicates, spaces in braces, `phone` excluded, invalid names ignored.
 - `render`: missing/blank optional values become `""`, repeated placeholders, `{{phone}}`.
