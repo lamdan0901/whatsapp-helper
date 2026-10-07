@@ -122,6 +122,7 @@ function rowErrors(template, values) {
 function applyPaste(rows, rowIdx, colIdx, grid, columns) {
   grid.forEach((cells, i) => {
     const row = (rows[rowIdx + i] ??= { values: {}, sent: false });
+    row.sent = false; // new contact data: the old "sent" mark no longer applies
     cells.forEach((value, j) => {
       const col = columns[colIdx + j];
       if (col) row.values[col] = value;
@@ -353,6 +354,7 @@ function initUI() {
           input.dataset.col = col;
           input.oninput = () => {
             row.values[col] = input.value;
+            row.sent = false;
             updateRow(tr, row);
           };
           input.onpaste = (e) => {

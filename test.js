@@ -144,3 +144,4 @@ eq('applyPaste fills right/down, adds rows, ignores extra cols', pasted.map((r) 
   { name: 'C' },
 ]);
 eq('applyPaste new rows unsent', pasted[1].sent, false);
+eq('applyPaste overwritten row unsent', pasted[0].sent, false);
