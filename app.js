@@ -175,6 +175,7 @@ function initUI() {
     for (const b of document.querySelectorAll('.tab')) b.classList.toggle('active', b.dataset.tab === name);
     $('tab-templates').hidden = name !== 'templates';
     $('tab-send').hidden = name !== 'send';
+    if (name === 'send') refreshSendSelect();
   }
   for (const b of document.querySelectorAll('.tab')) b.onclick = () => showTab(b.dataset.tab);
 
@@ -287,6 +288,128 @@ function initUI() {
     persist();
     renderList();
   };
+
+  // --- send tab ---
+  const newRow = () => ({ values: {}, sent: false });
+  let sendTpl = null;
+  let rows = [newRow()];
+
+  function selectTemplate(t) {
+    sendTpl = t;
+    rows = [newRow()];
+  }
+
+  function refreshSendSelect() {
+    const sel = $('send-template');
+    sel.replaceChildren(...templates.map((t) => new Option(t.name, t.id)));
+    sel.disabled = !templates.length;
+    if (!templates.length) sel.append(new Option('No templates yet', ''));
+    const current = sendTpl && templates.find((t) => t.id === sendTpl.id);
+    if (current) {
+      sendTpl = current; // pick up template edits, keep the rows
+      sel.value = current.id;
+    } else {
+      selectTemplate(templates[0] ?? null);
+    }
+    renderTable();
+  }
+
+  $('send-template').onchange = (e) => {
+    selectTemplate(templates.find((t) => t.id === e.target.value) ?? null);
+    renderTable();
+  };
+  $('row-add').onclick = () => {
+    rows.push(newRow());
+    renderTable();
+  };
+  $('row-clear').onclick = () => {
+    rows = [newRow()];
+    renderTable();
+  };
+
+  function renderTable() {
+    const table = $('send-table');
+    $('row-add').disabled = $('row-clear').disabled = !sendTpl;
+    if (!sendTpl) {
+      table.tHead.replaceChildren();
+      table.tBodies[0].replaceChildren();
+      return;
+    }
+    const cols = columnsFor(sendTpl);
+    const head = document.createElement('tr');
+    const isRequired = (c) => c === 'phone' || !Object.hasOwn(sendTpl.fields, c) || sendTpl.fields[c].required !== false;
+    for (const label of [...cols.map((c) => (isRequired(c) ? `${c} *` : c)), 'Preview', '', '']) {
+      const th = document.createElement('th');
+      th.textContent = label;
+      head.append(th);
+    }
+    table.tHead.replaceChildren(head);
+    table.tBodies[0].replaceChildren(
+      ...rows.map((row, r) => {
+        const tr = document.createElement('tr');
+        cols.forEach((col, c) => {
+          const input = document.createElement('input');
+          input.value = own(row.values, col);
+          input.dataset.col = col;
+          input.oninput = () => {
+            row.values[col] = input.value;
+            updateRow(tr, row);
+          };
+          input.onpaste = (e) => {
+            const text = e.clipboardData.getData('text/plain');
+            if (!/[\t\n]/.test(text)) return; // single plain value: let the browser paste it
+            e.preventDefault();
+            applyPaste(rows, r, c, parseTSV(text), cols);
+            renderTable();
+          };
+          tr.insertCell().append(input);
+        });
+        tr.insertCell().className = 'preview';
+        tr.insertCell().className = 'send';
+        tr.insertCell().append(
+          button('✕', () => {
+            rows.splice(r, 1);
+            if (!rows.length) rows.push(newRow());
+            renderTable();
+          }),
+        );
+        updateRow(tr, row);
+        return tr;
+      }),
+    );
+  }
+
+  function updateRow(tr, row) {
+    const errors = rowErrors(sendTpl, row.values);
+    for (const input of tr.querySelectorAll('input')) {
+      const err = Object.hasOwn(errors, input.dataset.col) ? errors[input.dataset.col] : '';
+      input.classList.toggle('invalid', !!err);
+      input.title = err;
+    }
+    const msg = render(sendTpl.body, row.values);
+    tr.querySelector('.preview').textContent = msg;
+    tr.classList.toggle('sent', row.sent);
+    const cell = tr.querySelector('.send');
+    if (Object.keys(errors).length) {
+      const b = button('Send', null);
+      b.disabled = true;
+      cell.replaceChildren(b);
+      return;
+    }
+    const a = document.createElement('a');
+    a.className = 'button send-link';
+    a.href = waLink(normalizePhone(own(row.values, 'phone')), msg);
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = row.sent ? 'Sent ✓ (resend)' : 'Send';
+    // Defer the DOM update so replacing the link doesn't interrupt its own navigation.
+    a.onclick = () =>
+      setTimeout(() => {
+        row.sent = true;
+        updateRow(tr, row);
+      });
+    cell.replaceChildren(a);
+  }
 
   renderList();
   showTab(templates.length ? 'send' : 'templates');
