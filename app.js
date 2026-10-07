@@ -32,6 +32,37 @@ function waLink(phone, msg) {
   return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 }
 
+// Excel/Sheets clipboard: tab-separated, cells with tab/newline/quote are wrapped in "..." with "" escapes.
+function parseTSV(text) {
+  text = text.replace(/\r\n?/g, '\n').replace(/\n$/, '');
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (c === '"') quoted = false;
+      else cell += c;
+    } else if (c === '"' && cell === '') quoted = true;
+    else if (c === '\t') {
+      row.push(cell);
+      cell = '';
+    } else if (c === '\n') {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = '';
+    } else cell += c;
+  }
+  row.push(cell);
+  rows.push(row);
+  return rows;
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { own, parseFields, render, normalizePhone, waLink };
+  module.exports = { own, parseFields, render, normalizePhone, waLink, parseTSV };
 }

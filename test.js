@@ -51,3 +51,16 @@ eq(
   waLink('85291234567', 'Hi & bye?\n#1 🎉'),
   'https://wa.me/85291234567?text=Hi%20%26%20bye%3F%0A%231%20%F0%9F%8E%89',
 );
+
+// --- TSV paste ---
+const { parseTSV } = lib;
+eq('parseTSV grid', parseTSV('a\tb\nc\td'), [['a', 'b'], ['c', 'd']]);
+eq('parseTSV CRLF + trailing newline', parseTSV('a\tb\r\nc\td\r\n'), [['a', 'b'], ['c', 'd']]);
+eq(
+  'parseTSV quoted tab/newline/escaped quote',
+  parseTSV('"x\ty"\t"l1\nl2"\n"say ""hi"""\tz'),
+  [['x\ty', 'l1\nl2'], ['say "hi"', 'z']],
+);
+eq('parseTSV single cell from Excel', parseTSV('85291234567\r\n'), [['85291234567']]);
+eq('parseTSV empty cells kept', parseTSV('a\t\tc'), [['a', '', 'c']]);
+eq('parseTSV quote mid-cell is literal', parseTSV('5" screen\tx'), [['5" screen', 'x']]);
