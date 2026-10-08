@@ -132,7 +132,7 @@ function saveTemplates(storage, templates) {
 
 // Columns come from the body, not Object.keys(fields): Object.keys puts integer-like names first.
 function columnsFor(template) {
-  return ['phone', ...parseFields(template.body)];
+  return ['phone', 'name', ...parseFields(template.body).filter((name) => name !== 'name')];
 }
 
 function rowErrors(template, values) {
@@ -169,6 +169,11 @@ if (typeof module !== 'undefined') {
 
 function initUI() {
   const $ = (id) => document.getElementById(id);
+  const extensionMode = window.location.protocol === 'chrome-extension:' &&
+    typeof chrome !== 'undefined' && !!chrome.runtime?.id;
+  $('contact-hint').textContent = extensionMode
+    ? 'Name is needed to save a contact. With a name, Send also prepares the contact form. You click Save and Send in WhatsApp. Use WhatsApp in English.'
+    : 'To prepare contacts, load this folder as a browser extension and open it from the extension toolbar. Name is needed to save a contact.';
   const button = (text, onclick, className = '') => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -399,7 +404,8 @@ function initUI() {
     }
     const cols = columnsFor(sendTpl);
     const head = document.createElement('tr');
-    const isRequired = (c) => c === 'phone' || !Object.hasOwn(sendTpl.fields, c) || sendTpl.fields[c].required !== false;
+    const isRequired = (c) => c === 'phone' || (parseFields(sendTpl.body).includes(c) &&
+      (!Object.hasOwn(sendTpl.fields, c) || sendTpl.fields[c].required !== false));
     for (const label of [...cols.map((c) => (isRequired(c) ? `${c} *` : c)), 'Preview', '', '']) {
       const th = document.createElement('th');
       th.textContent = label;
@@ -413,6 +419,7 @@ function initUI() {
           const input = document.createElement('input');
           input.value = own(row.values, col);
           input.dataset.col = col;
+          input.setAttribute('aria-label', `${col} for row ${r + 1}`);
           input.oninput = () => {
             row.values[col] = input.value;
             row.sent = false;
@@ -458,10 +465,16 @@ function initUI() {
     tr.classList.toggle('sent', row.sent);
     updateCount();
     const cell = tr.querySelector('.send');
+    const contactName = own(row.values, 'name').trim();
+    const contactPhone = normalizePhone(own(row.values, 'phone'));
+    const saveContact = button('Save contact', () => prepareContact(tr, row, msg), 'save-contact');
+    saveContact.disabled = !extensionMode || !contactPhone || !contactName || contactName.length > 200 || !!row.preparing;
+    saveContact.title = !extensionMode ? 'Open the helper from the extension toolbar to save contacts' :
+      !contactName ? 'Enter a name to save this contact' : contactName.length > 200 ? 'Name must be at most 200 characters to save a contact' : '';
     if (Object.keys(errors).length) {
       const b = button('Send', null, 'primary');
       b.disabled = true;
-      cell.replaceChildren(b);
+      cell.replaceChildren(b, saveContact);
       return;
     }
     const a = document.createElement('a');
@@ -471,12 +484,36 @@ function initUI() {
     a.rel = 'noopener';
     a.textContent = row.sent ? 'Sent ✓ (resend)' : 'Send';
     // Defer the DOM update so replacing the link doesn't interrupt its own navigation.
-    a.onclick = () =>
+    a.onclick = (e) => {
+      if (extensionMode && contactName && contactName.length <= 200) {
+        e.preventDefault();
+        if (!row.preparing) prepareContact(tr, row, msg);
+        return;
+      }
       setTimeout(() => {
         row.sent = true;
         updateRow(tr, row);
       });
-    cell.replaceChildren(a);
+    };
+    cell.replaceChildren(a, saveContact);
+  }
+
+  async function prepareContact(tr, row, message) {
+    row.preparing = true;
+    updateRow(tr, row);
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'prepare-contact', phone: normalizePhone(own(row.values, 'phone')),
+        name: own(row.values, 'name').trim(), message,
+      });
+      if (!response || response.ok !== true) throw new Error(response?.error || 'The extension could not open WhatsApp.');
+      // Opening a draft does not prove the user saved the contact or sent the message.
+    } catch (error) {
+      showBanner(error.message);
+    } finally {
+      row.preparing = false;
+      updateRow(tr, row);
+    }
   }
 
   renderList();
