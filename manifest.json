@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "WhatsApp Helper",
+  "version": "1.0.0",
+  "description": "Prepare personalized messages and new WhatsApp contacts. You click Save and Send yourself.",
+  "minimum_chrome_version": "112",
+  "permissions": ["storage"],
+  "host_permissions": ["https://web.whatsapp.com/*"],
+  "action": { "default_title": "Open WhatsApp Helper" },
+  "background": { "service_worker": "extension/background.js" },
+  "content_scripts": [{
+    "matches": ["https://web.whatsapp.com/*"],
+    "js": ["extension/whatsapp-dom.js", "extension/content.js"],
+    "run_at": "document_idle"
+  }]
+}

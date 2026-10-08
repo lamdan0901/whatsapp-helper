@@ -136,8 +136,8 @@ const tpl = {
   fields: { name: { required: true }, note: { required: false } },
 };
 eq('columnsFor', columnsFor(tpl), ['phone', 'name', 'note']);
-eq('columnsFor phone-only template', columnsFor({ body: 'call {{phone}}', fields: {} }), ['phone']);
-eq('columnsFor digit names keep body order', columnsFor({ body: '{{b}}{{1}}', fields: {} }), ['phone', 'b', '1']);
+eq('columnsFor phone-only template includes contact name', columnsFor({ body: 'call {{phone}}', fields: {} }), ['phone', 'name']);
+eq('columnsFor digit names keep body order', columnsFor({ body: '{{b}}{{1}}', fields: {} }), ['phone', 'name', 'b', '1']);
 eq('rowErrors valid', rowErrors(tpl, { phone: '+852 9123 4567', name: 'Ann' }), {});
 eq('rowErrors bad phone + blank required', rowErrors(tpl, { phone: '123', name: '  ' }), {
   phone: 'Use full international number, e.g. 85291234567',

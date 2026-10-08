@@ -175,6 +175,8 @@ tbody tr:hover { background: var(--surface-2); }
 tbody tr:last-child td { border-bottom: 0; }
 td input { width: 100%; min-width: 9em; padding: 6px 8px; }
 td.preview { min-width: 220px; max-width: 360px; color: var(--muted); font-size: 0.85rem; padding-top: 12px; }
+td.send { white-space: nowrap; }
+td.send > * + * { margin-left: 8px; }
 tr.sent td:not(.send) { opacity: 0.55; }
 a.send-link.is-sent { background: var(--accent-soft); color: var(--accent-text); border-color: transparent; box-shadow: none; }
 
